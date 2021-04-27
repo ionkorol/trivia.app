@@ -1,18 +1,24 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/core";
+import { Layout } from "components/common";
 import { Button } from "components/ui";
 import React, { useCallback, useEffect, useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
 import { colors } from "style";
 import { shuffle } from "utils/functions";
-import { QuestionProp } from "utils/interfaces";
-import questionsJson from "utils/questions.json";
+import { QuestionProp, ResultsProp } from "utils/interfaces";
+import * as gameActions from "reduxx/actions/gameActions";
+import { connect } from "react-redux";
 
-interface Props {}
+interface Props {
+  gameSetResults: typeof gameActions.setResults;
+}
 
-const Game: React.FC<Props> = () => {
+const Game: React.FC<Props> = (props) => {
+  const { gameSetResults } = props;
+
   const [questions, setQuestions] = useState<QuestionProp[] | null>(null);
   const [question, setQuestion] = useState<QuestionProp | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [options, setOptions] = useState<string[]>([]);
 
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
 
@@ -21,6 +27,8 @@ const Game: React.FC<Props> = () => {
   const [timerObj, setTimerObj] = useState<NodeJS.Timeout | null>(null);
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  const [correctAnswers, setCorrectAnswers] = useState<number>(0);
 
   const nav = useNavigation();
 
@@ -42,7 +50,7 @@ const Game: React.FC<Props> = () => {
     }
 
     if (currentQuestionNumber === questions?.length) {
-      nav.navigate("Main");
+      nav.navigate("Result");
       return;
     }
     setSelectedAnswer(null);
@@ -55,7 +63,13 @@ const Game: React.FC<Props> = () => {
       setSelectedAnswer(answer);
       if (question?.correct_answer.includes(answer)) {
         setPoints((prevState) => prevState + timer);
+        setCorrectAnswers((prevState) => prevState + 1);
       }
+      gameSetResults({
+        score: points,
+        correctAnswers,
+        totalQuestions: questions!.length,
+      });
     }
   };
 
@@ -66,7 +80,7 @@ const Game: React.FC<Props> = () => {
   // Set timer object
   useEffect(() => {
     if (question) {
-      setAnswers(
+      setOptions(
         shuffle([...question.incorrect_answers, question.correct_answer])
       );
       setCurrentQuestionNumber((prevState) => prevState + 1);
@@ -120,69 +134,75 @@ const Game: React.FC<Props> = () => {
     );
   }
   return (
-    <View style={styles.container}>
-      <View style={styles.info}>
-        <View>
-          <Text style={styles.textLight}>SCORE: {points}</Text>
+    <Layout>
+      <View style={styles.container}>
+        <View style={styles.info}>
+          <View>
+            <Text style={styles.textLight}>SCORE: {points}</Text>
+          </View>
+          <View>
+            <Text style={styles.textLight}>
+              Question: {currentQuestionNumber}/{questions.length}
+            </Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.textLight}>
-            Question: {currentQuestionNumber}/{questions.length}
+        <View style={styles.time}>
+          <Text style={{ ...styles.textLight, fontSize: 40 }}>{timer}</Text>
+        </View>
+        <View style={styles.question}>
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.1}
+            numberOfLines={4}
+            style={{
+              ...styles.textLight,
+              textAlign: "center",
+            }}
+          >
+            {decodeURIComponent(question.question)}
           </Text>
         </View>
-      </View>
-      <View style={styles.time}>
-        <Text style={{ ...styles.textLight, fontSize: 40 }}>{timer}</Text>
-      </View>
-      <View style={styles.question}>
-        <Text
-          adjustsFontSizeToFit
-          minimumFontScale={0.1}
-          numberOfLines={4}
-          style={{
-            ...styles.textLight,
-            textAlign: "center",
-          }}
-        >
-          {decodeURIComponent(question.question)}
-        </Text>
-      </View>
-      <View style={styles.answers}>
-        {answers.map((answer, index) => (
-          <TouchableOpacity
-            onPress={() => acceptAnswer(answer)}
-            style={{
-              ...styles.answer,
-              backgroundColor: !selectedAnswer
-                ? undefined
-                : selectedAnswer === answer &&
-                  question.incorrect_answers.includes(answer)
-                ? colors.warning
-                : answer === question.correct_answer
-                ? colors.success
-                : colors.danger,
-            }}
-            key={index}
-          >
-            <Text
-              adjustsFontSizeToFit
-              minimumFontScale={0.1}
-              numberOfLines={1}
-              style={styles.textLight}
+        <View style={styles.answers}>
+          {options.map((answer, index) => (
+            <TouchableOpacity
+              onPress={() => acceptAnswer(answer)}
+              style={{
+                ...styles.answer,
+                backgroundColor: !selectedAnswer
+                  ? undefined
+                  : selectedAnswer === answer &&
+                    question.incorrect_answers.includes(answer)
+                  ? colors.warning
+                  : answer === question.correct_answer
+                  ? colors.success
+                  : colors.danger,
+              }}
+              key={index}
             >
-              {decodeURIComponent(answer)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.1}
+                numberOfLines={1}
+                style={styles.textLight}
+              >
+                {decodeURIComponent(answer)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Button disabled={!selectedAnswer} onPress={nextQuestion}>
+          Next
+        </Button>
       </View>
-      <Button disabled={!selectedAnswer} onPress={nextQuestion}>
-        Next
-      </Button>
-    </View>
+    </Layout>
   );
 };
 
-export default Game;
+const mapDispatch = {
+  gameSetResults: gameActions.setResults as any,
+};
+
+export default connect(null, mapDispatch)(Game);
 
 const styles = StyleSheet.create({
   container: {

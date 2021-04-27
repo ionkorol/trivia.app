@@ -13,3 +13,9 @@ export interface QuestionProp {
   correct_answer: string;
   incorrect_answers: string[];
 }
+
+export interface ResultsProp {
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+}

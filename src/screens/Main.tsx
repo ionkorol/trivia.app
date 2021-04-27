@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/core";
 import { Layout, Logo } from "components/common";
 import { Button } from "components/ui";
 import React from "react";
-import { Text, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { colors } from "style";
 
 const MainScreen = () => {
@@ -18,8 +18,8 @@ const MainScreen = () => {
           <Button onPress={() => nav.navigate("Game")} outline>
             Play
           </Button>
-          {/* <Button outline>Sign In</Button>
-          <Button outline>Leader Board</Button> */}
+          {/* <Button disabled outline>Multiplayer (Coming Soon...)</Button>
+          <Button disabled outline>Leader Board</Button> */}
         </View>
       </View>
     </Layout>

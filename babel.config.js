@@ -12,7 +12,7 @@ module.exports = function (api) {
             assets: "./src/assets",
             style: "./src/style",
             utils: "./src/utils",
-            redux: "./src/redux",
+            reduxx: "./src/reduxx",
             navigation: "./src/navigation",
           },
         },
