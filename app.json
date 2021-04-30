@@ -16,7 +16,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "is.media.trivia",
+      "bundleIdentifier": "is.digital.istrivia",
       "buildNumber": "2"
     },
     "android": {
