@@ -1,24 +1,47 @@
+import {
+  Box,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StatusBar,
+} from "native-base";
 import React from "react";
-import { View, SafeAreaView, StatusBar, StyleSheet } from "react-native";
-import { colors } from "style";
+import {
+  LayoutAnimation,
+  SafeAreaView,
+  Platform,
+  Keyboard,
+} from "react-native";
 
-const Layout: React.FC = (props) => {
+interface Props {
+  scroll?: boolean;
+}
+
+const Layout: React.FC<Props> = (props) => {
+  const { scroll } = props;
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.primary }}>
+    <Box flex={1} backgroundColor="primary.300">
       <StatusBar barStyle="light-content" />
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.container}>{props.children}</View>
+        {scroll ? (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            flex={1}
+          >
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+              <Pressable onPress={Keyboard.dismiss} flex={1}>
+                {props.children}
+              </Pressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        ) : (
+          <Box flex={1}>{props.children}</Box>
+        )}
       </SafeAreaView>
-    </View>
+    </Box>
   );
 };
 
 export default Layout;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "center",
-  },
-});

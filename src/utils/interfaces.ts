@@ -2,7 +2,11 @@ export interface UserProp {
   id: string;
   name: string;
   email: string;
-  sex: "male" | "female";
+  points: number;
+  rank: {
+    current: number | null;
+    change: number;
+  };
 }
 
 export interface QuestionProp {

@@ -1,46 +1,59 @@
 import { useFocusEffect, useNavigation } from "@react-navigation/core";
 import { Layout } from "components/common";
-import { Button } from "components/ui";
 import React, { useCallback, useEffect, useState } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
-import { colors } from "style";
 import { shuffle } from "utils/functions";
-import { QuestionProp, ResultsProp } from "utils/interfaces";
-import * as gameActions from "reduxx/actions/gameActions";
-import { connect } from "react-redux";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Button,
+  Center,
+  HStack,
+  Spinner,
+  VStack,
+  Text,
+  Heading,
+  Icon,
+} from "native-base";
+import { Alert } from "react-native";
+import {
+  incrementCorrectAnswers,
+  incrementScore,
+} from "reduxx/slices/gameSlice/resultSlice";
+import { useAppDispatch, useAppSelector } from "reduxx/store";
+import {
+  clearQuestion,
+  setQuestion,
+} from "reduxx/slices/gameSlice/questionSlice";
+import {
+  clearQuestions,
+  readGameQuestions,
+} from "reduxx/slices/gameSlice/questionsSlice";
 
-interface Props {
-  gameSetResults: typeof gameActions.setResults;
-}
-
+interface Props {}
 const Game: React.FC<Props> = (props) => {
-  const { gameSetResults } = props;
-
-  const [questions, setQuestions] = useState<QuestionProp[] | null>(null);
-  const [question, setQuestion] = useState<QuestionProp | null>(null);
-  const [options, setOptions] = useState<string[]>([]);
-
+  const { question, questions, result } = useAppSelector((state) => state.game);
+  
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
 
-  const [points, setPoints] = useState(0);
   const [timer, setTimer] = useState(20);
-  const [timerObj, setTimerObj] = useState<NodeJS.Timeout | null>(null);
+  const [timerObj, setTimerObj] = useState<NodeJS.Timer | null>(null);
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [options, setOptions] = useState<string[]>([]);
+  // const [correctAnswers, setCorrectAnswers] = useState<number>(0);
 
-  const [correctAnswers, setCorrectAnswers] = useState<number>(0);
+  const dispatch = useAppDispatch();
 
   const nav = useNavigation();
 
   // Get Questions and set first question
-  const getQuestions = async () => {
-    const res = await fetch(
-      "https://opentdb.com/api.php?amount=10&encode=url3986"
-    );
-    const data = await res.json();
-    setQuestions(data.results);
-    setQuestion(data.results[currentQuestionNumber]);
-  };
+  // const getQuestions = async () => {
+  //   const res = await fetch(
+  //     "https://opentdb.com/api.php?amount=10&encode=url3986&type=multiple"
+  //   );
+  //   const data = await res.json();
+  //   setQuestions(data.results);
+  //   setQuestion(data.results[currentQuestionNumber]);
+  // };
 
   // Handle next question button
   const nextQuestion = () => {
@@ -49,29 +62,36 @@ const Game: React.FC<Props> = (props) => {
       return;
     }
 
-    if (currentQuestionNumber === questions?.length) {
+    if (currentQuestionNumber === questions.data.length) {
       nav.navigate("Result");
       return;
     }
     setSelectedAnswer(null);
-    setQuestion(questions![currentQuestionNumber]);
+    dispatch(setQuestion(questions.data![currentQuestionNumber]));
   };
 
   // Handle select answer
   const acceptAnswer = (answer: string) => {
-    if (!selectedAnswer) {
-      setSelectedAnswer(answer);
-      if (question?.correct_answer.includes(answer)) {
-        setPoints((prevState) => prevState + timer);
-        setCorrectAnswers((prevState) => prevState + 1);
-      }
-      gameSetResults({
-        score: points,
-        correctAnswers,
-        totalQuestions: questions!.length,
-      });
+    if (selectedAnswer) {
+      return;
     }
+
+    setSelectedAnswer(answer);
+
+    if (question.data!.correct_answer.includes(answer)) {
+      dispatch(incrementScore(timer));
+      dispatch(incrementCorrectAnswers());
+    }
+
+    // Set Result TODO: Somewhere else
+    // dispatch(setTotalQuestions(questions.data.length));
   };
+
+  useEffect(() => {
+    if (questions.data.length && !question.data) {
+      dispatch(setQuestion(questions.data[0]));
+    }
+  }, [questions.data]);
 
   // On Question change:
   // Set answers
@@ -79,18 +99,21 @@ const Game: React.FC<Props> = (props) => {
   // Reset timer
   // Set timer object
   useEffect(() => {
-    if (question) {
-      setOptions(
-        shuffle([...question.incorrect_answers, question.correct_answer])
-      );
+    if (question.data) {
       setCurrentQuestionNumber((prevState) => prevState + 1);
       setTimer(20);
       // Handle timer
       setTimerObj(
         setInterval(() => setTimer((prevState) => prevState - 1), 1000)
       );
+      setOptions(
+        shuffle([
+          ...question.data.incorrect_answers,
+          question.data.correct_answer,
+        ])
+      );
     }
-  }, [question]);
+  }, [question.data]);
 
   // Stop timer after answer selection
   useEffect(() => {
@@ -104,13 +127,12 @@ const Game: React.FC<Props> = (props) => {
   // Reset state on exit
   useFocusEffect(
     useCallback(() => {
-      getQuestions();
+      dispatch(readGameQuestions() as any);
       return () => {
-        setQuestions(null);
-        setQuestion(null);
+        dispatch(clearQuestions());
+        dispatch(clearQuestion());
         setSelectedAnswer(null);
         setCurrentQuestionNumber(0);
-        setPoints(0);
         if (timerObj) {
           clearInterval(timerObj);
         }
@@ -121,125 +143,91 @@ const Game: React.FC<Props> = (props) => {
   // If timer runs out set a wrong question
   useEffect(() => {
     if (timer <= 0) {
-      setSelectedAnswer(question?.incorrect_answers[0]!);
+      setSelectedAnswer(question.data!.incorrect_answers[0]);
     }
   }, [timer]);
 
   // If no questions or question
-  if (!questions || !question) {
+  if (!questions.data.length || !question.data) {
     return (
-      <View>
-        <Text>Loading...</Text>
-      </View>
+      <Center>
+        <Spinner />
+      </Center>
     );
   }
   return (
     <Layout>
-      <View style={styles.container}>
-        <View style={styles.info}>
-          <View>
-            <Text style={styles.textLight}>SCORE: {points}</Text>
-          </View>
-          <View>
-            <Text style={styles.textLight}>
-              Question: {currentQuestionNumber}/{questions.length}
+      <VStack flex={1}>
+        <HStack justifyContent="space-between" alignItems="center" padding={5}>
+          <VStack alignItems="center">
+            <Text>{result.score}</Text>
+            <Text>Score</Text>
+          </VStack>
+          <Heading>{timer}</Heading>
+
+          <VStack alignItems="center">
+            <Text>
+              {currentQuestionNumber}/{questions.data.length}
             </Text>
-          </View>
-        </View>
-        <View style={styles.time}>
-          <Text style={{ ...styles.textLight, fontSize: 40 }}>{timer}</Text>
-        </View>
-        <View style={styles.question}>
-          <Text
-            adjustsFontSizeToFit
-            minimumFontScale={0.1}
-            numberOfLines={4}
-            style={{
-              ...styles.textLight,
-              textAlign: "center",
-            }}
-          >
-            {decodeURIComponent(question.question)}
-          </Text>
-        </View>
-        <View style={styles.answers}>
-          {options.map((answer, index) => (
-            <TouchableOpacity
-              onPress={() => acceptAnswer(answer)}
-              style={{
-                ...styles.answer,
-                backgroundColor: !selectedAnswer
-                  ? undefined
-                  : selectedAnswer === answer &&
-                    question.incorrect_answers.includes(answer)
-                  ? colors.warning
-                  : answer === question.correct_answer
-                  ? colors.success
-                  : colors.danger,
-              }}
-              key={index}
+            <Text>Question</Text>
+          </VStack>
+        </HStack>
+
+        <VStack
+          backgroundColor="white"
+          flex={1}
+          padding={5}
+          borderTopRadius={50}
+          shadow={5}
+        >
+          <Center padding={5}>
+            <Icon
+              as={MaterialCommunityIcons}
+              name="owl"
+              color="primary.300"
+              size="lg"
+            />
+            <Heading
+              size="md"
+              textAlign="center"
+              adjustsFontSizeToFit
+              minimumFontScale={0.1}
+              numberOfLines={3}
+              color="black"
             >
-              <Text
-                adjustsFontSizeToFit
-                minimumFontScale={0.1}
-                numberOfLines={1}
-                style={styles.textLight}
+              {decodeURIComponent(question.data.question)}
+            </Heading>
+          </Center>
+          <VStack flex={1} space={3} paddingY={3} justifyContent="flex-end">
+            {options.map((answer, index) => (
+              <Button
+                variant={!selectedAnswer ? "outline" : "solid"}
+                onPress={() => acceptAnswer(answer)}
+                size="md"
+                colorScheme={
+                  selectedAnswer
+                    ? selectedAnswer === answer
+                      ? question.data!.correct_answer === answer
+                        ? "green"
+                        : "red"
+                      : question.data!.correct_answer === answer
+                      ? "green"
+                      : "blue"
+                    : "primary"
+                }
+                key={index}
               >
                 {decodeURIComponent(answer)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Button disabled={!selectedAnswer} onPress={nextQuestion}>
-          Next
-        </Button>
-      </View>
+              </Button>
+            ))}
+          </VStack>
+          <Button disabled={!selectedAnswer} onPress={nextQuestion}>
+            Next
+          </Button>
+        </VStack>
+      </VStack>
     </Layout>
   );
 };
 
-const mapDispatch = {
-  gameSetResults: gameActions.setResults as any,
-};
-
-export default connect(null, mapDispatch)(Game);
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: "column",
-    padding: 30,
-    backgroundColor: colors.primary,
-  },
-  info: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  time: {
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  question: {
-    flex: 1,
-    borderWidth: 3,
-    borderColor: colors.light,
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "stretch",
-  },
-  answers: {
-    flex: 3,
-    justifyContent: "space-evenly",
-  },
-  answer: {
-    borderWidth: 3,
-    borderColor: colors.light,
-    padding: 15,
-    borderRadius: 10,
-  },
-  textLight: {
-    color: colors.light,
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-});
+export default Game;

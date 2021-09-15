@@ -1,16 +1,21 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { MainNavigation } from "navigation";
+
 import { Provider } from "react-redux";
-import store from "reduxx/store";
+import { store } from "reduxx/store";
+
+import "utils/firebase";
+
+import MainScreen from "screens/Main";
+import { NativeBaseProvider } from "native-base";
+import theme from "style/theme";
 
 const App = () => {
   return (
-    <Provider store={store}>
-      <NavigationContainer>
-        <MainNavigation />
-      </NavigationContainer>
-    </Provider>
+    <NativeBaseProvider theme={theme}>
+      <Provider store={store}>
+        <MainScreen />
+      </Provider>
+    </NativeBaseProvider>
   );
 };
 export default App;

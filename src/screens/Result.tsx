@@ -1,124 +1,96 @@
 import React, { useCallback } from "react";
 import { useFocusEffect, useNavigation } from "@react-navigation/core";
 import { Layout, Logo } from "components/common";
-import { Button } from "components/ui";
-import { View, StyleSheet, Text } from "react-native";
-import { connect } from "react-redux";
-import { RootState } from "reduxx/store";
-import { colors } from "style";
-import { ResultsProp } from "utils/interfaces";
-import * as gameActions from "reduxx/actions/gameActions";
+import { useAppDispatch, useAppSelector } from "reduxx/store";
+import {
+  Button,
+  VStack,
+  Text,
+  Heading,
+  HStack,
+  Box,
+  Divider,
+  Icon,
+} from "native-base";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { clearResult } from "reduxx/slices/gameSlice/resultSlice";
+import { addUserPoints } from "reduxx/slices/userSlice";
 
-interface Props {
-  gameResults: ResultsProp | null;
-  gameClearResults: typeof gameActions.clearResults;
-}
+interface Props {}
 
 const Result: React.FC<Props> = (props) => {
-  const { gameResults, gameClearResults } = props;
-  const totalQuestions = 10;
-  const correctAnswers = 5;
-  const score = 250;
+  const userData = useAppSelector((state) => state.user.data!);
 
+  const { score, totalQuestions, correctAnswers } = useAppSelector(
+    (state) => state.game.result
+  );
+  const dispatch = useAppDispatch();
   const nav = useNavigation();
 
   useFocusEffect(
     useCallback(() => {
-      return () => gameClearResults();
+      dispatch(addUserPoints(score) as any);
+      return () => dispatch(clearResult());
     }, [])
   );
 
   return (
     <Layout>
-      <View style={styles.container}>
-        <Logo />
-        <View style={styles.card}>
-          <Text style={styles.headline}>Good Job</Text>
-          <View style={styles.resultsContainer}>
-            <View style={styles.result}>
-              <Text style={styles.resultTitle}>SCORE</Text>
-              <Text style={styles.resultValue}>
-                {gameResults && gameResults.score}
-              </Text>
-            </View>
-            <View style={{ ...styles.result, ...styles.bordered }}>
-              <Text style={styles.resultTitle}>QUESTIONS</Text>
-              <Text style={styles.resultValue}>
-                {gameResults && gameResults.totalQuestions}
-              </Text>
-            </View>
-            <View style={styles.result}>
-              <Text style={styles.resultTitle}>CORRECT</Text>
-              <Text style={styles.resultValue}>
-                {gameResults && gameResults.correctAnswers}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <Button onPress={() => nav.navigate("Main")}>Close</Button>
-      </View>
+      <VStack flex={1}>
+        <VStack space={5} alignItems="center" flex={1} padding={5}>
+          <Logo />
+          <VStack alignItems="center">
+            <Box backgroundColor="white" padding={2} borderRadius={50}>
+              <Icon as={FontAwesome5} name="user-alt" color="primary.500" />
+            </Box>
+            <Heading size="sm">{userData && userData.name}</Heading>
+          </VStack>
+          <HStack
+            justifyContent="space-evenly"
+            divider={<Divider bgColor="muted.200" />}
+          >
+            <VStack flex={1} paddingX={2} alignItems="center">
+              <Heading>{score}</Heading>
+              <Text>Total</Text>
+              <Text>Score</Text>
+            </VStack>
+            <VStack flex={1} paddingX={2} alignItems="center">
+              <Heading>{totalQuestions}</Heading>
+              <Text>Total </Text>
+              <Text>Questions</Text>
+            </VStack>
+            <VStack flex={1} paddingX={2} alignItems="center">
+              <Heading>{correctAnswers}</Heading>
+              <Text>Correct </Text>
+              <Text>Answers</Text>
+            </VStack>
+          </HStack>
+        </VStack>
+        <VStack
+          flex={1}
+          backgroundColor="white"
+          padding={10}
+          borderTopRadius={50}
+          space={10}
+          shadow={5}
+        >
+          <Button
+            startIcon={<Icon as={FontAwesome5} name="chart-pie" />}
+            variant="outline"
+            onPress={() => nav.navigate("Account")}
+          >
+            Personal Statistics
+          </Button>
+          <HStack space={3} justifyContent="center" alignItems="center">
+            <Divider bgColor="muted.300" width={20} />
+            <Text color="muted.300">OR</Text>
+            <Divider bgColor="muted.300" width={20} />
+          </HStack>
+          <Button onPress={() => nav.navigate("Home")}>Home</Button>
+        </VStack>
+      </VStack>
     </Layout>
   );
 };
 
-const mapState = (state: RootState) => ({
-  gameResults: state.game.results,
-});
-
-const mapDispatch = {
-  gameClearResults: gameActions.clearResults as any,
-};
-
-export default connect(mapState, mapDispatch)(Result);
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "space-evenly",
-    padding: 30,
-  },
-  card: {
-    justifyContent: "space-around",
-    alignItems: "stretch",
-    height: "50%",
-    backgroundColor: colors.light,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 20,
-  },
-  headline: {
-    textAlign: "center",
-    textTransform: "uppercase",
-    fontSize: 30,
-    fontWeight: "bold",
-    color: colors.secondary,
-  },
-  resultsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-  },
-  result: {
-    flex: 1,
-    alignItems: "center",
-  },
-  resultTitle: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "gray",
-  },
-  resultValue: {
-    fontSize: 25,
-    fontWeight: "bold",
-  },
-  bordered: {
-    borderRightWidth: 2,
-    borderLeftWidth: 2,
-    borderColor: "gray",
-  },
-});
+export default Result;

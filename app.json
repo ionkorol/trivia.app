@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "ISTrivia",
-    "slug": "is-trivia",
-    "version": "3.2.0",
+    "name": "Trivify",
+    "slug": "trivia",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -16,16 +16,16 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "is.digital.istrivia",
-      "buildNumber": "2"
+      "bundleIdentifier": "digital.korol.trivia",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "is.digital.istrivia",
-      "versionCode": 2
+      "package": "digital.korol.trivia",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"

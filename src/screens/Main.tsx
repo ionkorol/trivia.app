@@ -1,41 +1,83 @@
-import { useNavigation } from "@react-navigation/core";
-import { Layout, Logo } from "components/common";
-import { Button } from "components/ui";
-import React from "react";
-import { StyleSheet, View } from "react-native";
-import { colors } from "style";
+import {
+  Baloo2_400Regular,
+  Baloo2_500Medium,
+  Baloo2_700Bold,
+} from "@expo-google-fonts/baloo-2";
+import { Courgette_400Regular } from "@expo-google-fonts/courgette";
+import { NavigationContainer } from "@react-navigation/native";
+import { useFonts } from "expo-font";
+import firebase from "firebase";
+import { Center, Spinner } from "native-base";
+import { AuthNavigation, MainNavigation } from "navigation";
+import React, { useEffect, useState } from "react";
+import {
+  setUserCredentials,
+  readUser,
+  setUserData,
+} from "reduxx/slices/userSlice";
+import { useAppDispatch, useAppSelector } from "reduxx/store";
 
-const MainScreen = () => {
-  const nav = useNavigation();
+const Main = () => {
+  const [fontsLoaded] = useFonts({
+    Baloo2_400Regular,
+    Baloo2_500Medium,
+    Baloo2_700Bold,
+    Courgette_400Regular,
+  });
+
+  const [ready, setReady] = useState(false);
+
+  const dispatch = useAppDispatch();
+  const { data, credentials } = useAppSelector((state) => state.user);
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      setReady(true);
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    const unsubCreds = firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        dispatch(readUser(user.uid) as any);
+        dispatch(setUserCredentials(user.toJSON()));
+      } else {
+        dispatch(setUserCredentials(null));
+        dispatch(setUserData(null));
+      }
+    });
+    let unsubData = () => {};
+    if (data)
+      unsubData = firebase
+        .firestore()
+        .collection("users")
+        .doc(data.id)
+        .onSnapshot((snap) => {
+          const data = snap.data();
+          dispatch(setUserData(data));
+          console.log(data)
+        });
+
+    return () => {
+      unsubCreds();
+
+      unsubData();
+    };
+  }, []);
+
+  if (!ready) {
+    return (
+      <Center>
+        <Spinner />
+      </Center>
+    );
+  }
 
   return (
-    <Layout>
-      <View style={{ flex: 1, padding: 50 }}>
-        <View style={styles.container}>
-          <Logo />
-        </View>
-        <View style={styles.container}>
-          <Button onPress={() => nav.navigate("Game")} outline>
-            Play
-          </Button>
-          {/* <Button disabled outline>Multiplayer (Coming Soon...)</Button>
-          <Button disabled outline>Leader Board</Button> */}
-        </View>
-      </View>
-    </Layout>
+    <NavigationContainer>
+      {data && credentials ? <MainNavigation /> : <AuthNavigation />}
+    </NavigationContainer>
   );
 };
 
-export default MainScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "space-around",
-  },
-  text: {
-    fontSize: 20,
-    color: colors.light,
-  },
-});
+export default Main;
